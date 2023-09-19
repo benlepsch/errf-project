@@ -69,7 +69,7 @@ def modify():
         # G28 = home, replace with `G28 X Z`
         if 'G28' in line:
             # also check for like 'G28 X0 Y0'
-            output += re.sub(r'G28( X[0-9]*)?( Y[0-9]*)?( Z[0-9]*)?', 'G28 X Z', line)
+            output += re.sub(r'G28( X[0-9]*)?( Y[0-9]*)?( Z[0-9]*)?', 'G28 X0 Z0', line)
         else:
             output += line
         

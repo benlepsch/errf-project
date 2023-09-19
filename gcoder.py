@@ -28,6 +28,7 @@ could also just do this as a preset at first
 
 from tkinter import *
 from tkinter import filedialog
+import re
 
 # -----------------------  Browse Files  ------------------------- #
 
@@ -66,9 +67,9 @@ def modify():
     # remove "home all" lines
     for line in infile.read().split('\n'):
         # G28 = home, replace with `G28 X Z`
-        # could check to see if its homing y axis but this is easier
-        if line.split(' ')[0] == 'G28':
-            output += 'G28 X Z'
+        if 'G28' in line:
+            # also check for like 'G28 X0 Y0'
+            output += re.sub(r'G28( X[0-9]*)?( Y[0-9]*)?( Z[0-9]*)?', 'G28 X Z', line)
         else:
             output += line
         

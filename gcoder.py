@@ -41,6 +41,8 @@ def file_explorer():
     fpath = filename
     selected_file_display.delete('1.0', END)
     selected_file_display.insert(END, filename)
+    if not (output_path_input_var.get() == ''):
+        output_path_input.delete(0, END)
     output_path_input.insert(0, filename[:-6] + '-FIXED.gcode')
 
 # ----------------------  Gcode Modifying  ----------------------- #
@@ -100,11 +102,11 @@ window.title('Gcode Fixer')
 # defenition
 selected_label = Label(window, text='Selected File:')
 browse_files = Button(window, text='Browse Files', command=file_explorer)
-selected_file_display = Text(window, height=1, width=60)
+selected_file_display = Text(window, height=1, width=100)
 
 output_path_label = Label(window, text='Output file:')
 output_path_input_var = StringVar(value='')
-output_path_input = Entry(window, textvariable=output_path_input_var, width=70)
+output_path_input = Entry(window, textvariable=output_path_input_var, width=100)
 
 go_button = Button(window, text='Fix File', command=modify)
 

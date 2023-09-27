@@ -26,8 +26,20 @@ could also just do this as a preset at first
 
 '''
 
+# how far to turn the conveyor belt after printing (mm along y axis)
+cycle_amt = 200
+
+# range for random values to add to cycle_amt
+# final distance is cycle_amt + randint(rrange[0], rrange[1])
+rrange = (1, 15)
+
+# speed to turn conveyor belt after printing (mm/min)
+belt_speed = 1800
+
+
 from tkinter import *
 from tkinter import filedialog
+from random import randint
 import re
 
 # -----------------------  Browse Files  ------------------------- #
@@ -47,10 +59,6 @@ def file_explorer():
     output_path_input.insert(0, filename[:-6] + '-FIXED.gcode')
 
 # ----------------------  Gcode Modifying  ----------------------- #
-
-# how far to turn the conveyor belt for 1 rotation + a little
-# actually how many millimeters its moving along y axis
-cycle_amt = 200
 
 def modify():
     global fpath, cycle_amt
@@ -79,7 +87,24 @@ def modify():
     # move conveyor belt a lot
     # G0 Y100 => sets Y axis to 100mm
     # if G0 is too fast, G1 allows u to set feed rate: G1 Y100 F1800 => move to 100mm at 1800mm/min
-    output += 'G0 Y' + str(cycle_amt) + '\n'
+    move_cmd = 'G1 Y' + str(cycle_amt + randint(rrange[0], rrange[1])) + ' F' + str(belt_speed) + '\n'
+    finish_regex =  r'''(M400                                      ; wait for moves to finish
+M140 S[0-9]+.?[0-9]+ ; start bed cooling
+M104 S0                                   ; disable hotend
+M107                                      ; disable fans
+G92 E5                                    ; set extruder to 5mm for retract on print end
+M117 Cooling please wait                  ; progress indicator message on LCD
+G1 X5 Y5 Z158 E0 F10000                   ; move to cooling position
+G1 E5                                     ; re-prime extruder
+M190 R[0-9]+.?[0-9]+ ; wait for bed to cool down to removal temp
+M77					  ; Stop GLCD Timer
+G1 X145 F1000                             ; move extruder out of the way
+G1 Y175 F1000                             ; present finished print
+M140 S[0-9]+.?[0-9]+; keep temperature or cool down
+M84                                       ; disable steppers
+G90                                       ; absolute positioning
+M117 Print Complete.                      ; print complete message)'''
+    output = re.sub(finish_regex, move_cmd + r'\1', output)
 
     # then should i try to set it so it thinks its back at Y=0?
     # actually i'm not sure i can

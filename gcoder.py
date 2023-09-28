@@ -1,6 +1,23 @@
-'''
-Ben Lepsch
+# how far to turn the conveyor belt after printing (mm along y axis)
+cycle_amt = 200
 
+# max distance to move continuously before breaking it up into smaller move commands
+max_cont_move = 500
+
+# range for random values to add to cycle_amt
+# final distance is cycle_amt + randint(rrange[0], rrange[1])
+rrange = (1, 15)
+
+# speed to turn conveyor belt after printing (mm/min)
+belt_speed = 1800
+
+# default values for looping gcode w/ m808
+repeating = True
+repeat_reps = 2
+
+
+
+'''
 program will:
 - take a gcode file
 - remove home all command, replace with home x and z
@@ -25,16 +42,6 @@ i am thinking config file so you can change conveyor belt full rotation value
 could also just do this as a preset at first
 
 '''
-
-# how far to turn the conveyor belt after printing (mm along y axis)
-cycle_amt = 200
-
-# range for random values to add to cycle_amt
-# final distance is cycle_amt + randint(rrange[0], rrange[1])
-rrange = (1, 15)
-
-# speed to turn conveyor belt after printing (mm/min)
-belt_speed = 1800
 
 
 from tkinter import *
@@ -61,7 +68,7 @@ def file_explorer():
 # ----------------------  Gcode Modifying  ----------------------- #
 
 def modify():
-    global fpath, cycle_amt
+    global fpath, cycle_amt, repeating, repeat_reps
     
     # verify output is .gcode
     output_name = output_path_input_var.get()
@@ -70,7 +77,7 @@ def modify():
 
     # open input file
     infile = open(fpath, 'r')
-    output = ''
+    output = ('M808 L' + str(repeat_reps)) if repeating else ''
     
     # remove "home all" lines
     for line in infile.read().split('\n'):
@@ -87,7 +94,16 @@ def modify():
     # move conveyor belt a lot
     # G0 Y100 => sets Y axis to 100mm
     # if G0 is too fast, G1 allows u to set feed rate: G1 Y100 F1800 => move to 100mm at 1800mm/min
-    move_cmd = 'G1 Y' + str(cycle_amt + randint(rrange[0], rrange[1])) + ' F' + str(belt_speed) + '\n'
+    move_dist = cycle_amt + randint(rrange[0], rrange[1])
+    move_cmd = ''
+    # split up longer moves into multiple 500 mm moves
+    while move_dist > max_cont_move:
+        move_cmd += 'G1 Y' + str(move_dist) + ' F' + str(belt_speed) + '\n'
+        move_dist -= max_cont_move
+    move_cmd += 'G1 Y' + str(move_dist) + ' F' + str(belt_speed) + '\n'
+
+    loop_cmd = 'M808\n' if repeating else ''
+
     finish_regex =  r'''(M400                                      ; wait for moves to finish
 M140 S[0-9]+.?[0-9]+ ; start bed cooling
 M104 S0                                   ; disable hotend
@@ -104,7 +120,7 @@ M140 S[0-9]+.?[0-9]+; keep temperature or cool down
 M84                                       ; disable steppers
 G90                                       ; absolute positioning
 M117 Print Complete.                      ; print complete message)'''
-    output = re.sub(finish_regex, move_cmd + r'\1', output)
+    output = re.sub(finish_regex, move_cmd + loop_cmd + r'\1', output)
 
     # then should i try to set it so it thinks its back at Y=0?
     # actually i'm not sure i can
